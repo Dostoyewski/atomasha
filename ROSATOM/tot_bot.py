@@ -2,7 +2,7 @@
 """
 Created on Thu Mar 28 12:27:06 2019
 
-@author: Федор
+@author: tot
 """
 
 from pprint import pprint
