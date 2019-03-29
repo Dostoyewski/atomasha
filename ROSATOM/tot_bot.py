@@ -25,11 +25,10 @@ rocket = RocketChat('atomasha', 'selena', server_url='http://178.70.218.84:3000'
 #rocket.chat_post_message('тест', channel='GENERAL')
 
 #for i in range(0, jsonData['ims'].length):
-    
-pprint(rocket.channels_history('GENERAL', count=5).json()['messages'])
 
 class Bot:
     def __init__(self, login, password):
+        self.login=login
         rocket = RocketChat(login, password, server_url='http://178.70.218.84:3000')
     def getLastMessage(self):
         user = rocket.channels_history('GENERAL', count=5).json()['messages'][0]['u']
@@ -37,10 +36,17 @@ class Bot:
         return user, msg
     def loop(self):
         while True:
-            user, msg = self.getLastMessage()
-            if ('привет, маша' in msg.lower()):
-                rocket.chat_post_message('Привет, '+user['name'], channel='GENERAL')
+            user, text = self.getLastMessage()
+            text = text.lower()
+            if all(c in text for c in ['привет', 'маша']):
+                msg = 'Привет, '+user['name']
+                self.send(msg)
+            if all(c in text for c in ['отправь', 'коды запуска ракет']):
+                msg = 'Извини, '+user['name']+', но ты не достоин :с'
+                self.send(msg)
+    def send(self, msg, ch='GENERAL'):
+        rocket.chat_post_message(msg, channel=ch)
+            
     
 atomasha = Bot('atomasha', 'selena')
-print(atomasha.getLastMessage())
 atomasha.loop()
