@@ -50,21 +50,25 @@ def run():
              #   if(str(name[i]['name']) != 'ATOMASHA'):
               #      rocket.chat_post_message('Иди нахуй, ' + str(name[i]['name']), channel=str(idd[i]))
             if(str(name[i]['name']) != 'ATOMASHA'):
-                rocket.chat_post_message(textMessage(text[i]), channel=str(idd[i]))
+                rocket.chat_post_message(textMessage(text[i], idd[i]), channel=str(idd[i]))
         print(idd)
         print(msg)
         print(text)
 
 
-def textMessage(update):
+def textMessage(update, did):
     request = apiai.ApiAI('76084f44b01a48c2abe6a51cd63476ae').text_request() # Токен API к Dialogflow
     request.lang = 'ru' # На каком языке будет послан запрос
-    request.session_id = 'ATOMASHA' # ID Сессии диалога (нужно, чтобы потом учить бота)
+    request.session_id = did # ID Сессии диалога (нужно, чтобы потом учить бота)
     request.query = update # Посылаем запрос к ИИ с сообщением от юзера
     responseJson = json.loads(request.getresponse().read().decode('utf-8'))
     response = responseJson['result']['fulfillment']['speech'] # Разбираем JSON и вытаскиваем ответ
     # Если есть ответ от бота - присылаем юзеру, если нет - бот его не понял
-    return response
+    if response:
+        return response
+    else:
+        return 'Я Вас не совсем понял!'
+    
 
 if __name__ == '__main__':
     main()
