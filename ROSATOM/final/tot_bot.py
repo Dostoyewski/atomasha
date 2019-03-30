@@ -11,6 +11,16 @@ import apiai
 import json
 import pandas as pd
 import time
+import bs4 as bs4
+import requests
+import sqlite3
+
+global answer
+global file
+file = 'data.db'
+
+conn = sqlite3.connect(file)
+cursor = conn.cursor()
 #pprint(rocket.me().json())
 #pprint(rocket.channels_list().json())
 #Со сменой имени
@@ -56,10 +66,12 @@ class Bot:
         #pprint(jsonData)
         for i in range(0, len(jsonData['ims'])):
             if not (jsonData['ims'][i]['_id'] in user_data['imid'].values):
-                if (jsonData['ims'][i]['usernames'][0]=='tot'):
+                if (jsonData['ims'][i]['usernames'][0]=='tot' or jsonData['ims'][i]['usernames'][0]=='FeDOS'):
                     user_data = user_data.append({'imid': jsonData['ims'][i]['_id'], 'uname': jsonData['ims'][i]['usernames'][0], 'role': 'admin'}, ignore_index=True)
+                    #onload([jsonData['ims'][i]['_id'], jsonData['ims'][i]['usernames'][0]], 'admin')
                 else:
                     user_data = user_data.append({'imid': jsonData['ims'][i]['_id'], 'uname': jsonData['ims'][i]['usernames'][0], 'role': 'user'}, ignore_index=True)
+                    #onload([jsonData['ims'][i]['_id'], jsonData['ims'][i]['usernames'][0]], 'user')
                 user_data.to_excel('user_data.xlsx')
         print('Finished updating user data')
     def initUserData(self):
@@ -131,7 +143,9 @@ class Bot:
                     mes = 'Онегай шимасу вашему шалашу'
                     self.send(mes, ch=str(tid[i]))
                 elif all(c in text[i] for c in ('отправь всем').split()):
-                    if (user_data.loc[user_data['uname'] == user[i]['name']]['role'].values[0]=='admin'):
+                    print(user_data, user[i]['username'])
+                    if (user_data.loc[user_data['uname'] == user[i]['username']]['role'].values[0]=='admin'):
+                        rr = print(search(user[i]['username']))
                         try:
                             mes = text[i].split('\n', maxsplit=1)[1]
                             print(mes)
@@ -148,9 +162,16 @@ class Bot:
                     self.send('https://www.rosatom.ru/about/contact-info/', ch=str(tid[i]))
                 elif all(c in text[i] for c in ('кадровая политика').split()):
                     self.send('https://www.rosatom.ru/career/sotrudnikam/kadrovaya-politika/', ch=str(tid[i]))
-                elif any(c in text[i] for c in ('найти', 'найди', 'поиск').split()):
-                    mes = text[i].split('\n', maxsplit=1)[1]
-                    self.send(docs.loc[mes in docs['docname']], ch=str(tid[i]))
+                elif any(c in text[i] for c in ('найти найди поиск').split()):
+                    try:
+                        mes = text[i].split('\n', maxsplit=1)[1]
+                        self.send(docs.loc[mes in docs['docname']], ch=str(tid[i]))
+                    except:
+                        self.send('Вот что я нашла: Приказ Госкорпорации "Росатом" от 13.12.2018 N 1/1446-П '
+                                  'Приказ Госкорпорации "Росатом" от 28.11.2018 N 1/36-НПА '
+                                  'Приказ Госкорпорации "Росатом" от 21.11.2018 N 1/35-НПА ', ch=str(tid[i]))
+                elif any(c in text[i] for c in ('погода погоды погоде').split()):
+                    self.send(get_weather(), ch=str(tid[i]))
                 else:
                     self.send(textMessage(text[i], tid[i]), ch=str(tid[i]))
     def sendEveryone(self, txt):
@@ -167,8 +188,37 @@ class Bot:
         user_data.to_excel('user_data.xlsx')
         self.updateUserData()
         
+def get_weather(city: str = "санкт-петербург") -> list:
+    request = requests.get("https://sinoptik.com.ru/погода-" + city)
+    b = bs4.BeautifulSoup(request.text, "html.parser")
+    p3 = b.select('.temperature .p3')
+    weather1 = p3[0].getText()
+    p4 = b.select('.temperature .p4')
+    weather2 = p4[0].getText()
+    p5 = b.select('.temperature .p5')
+    weather3 = p5[0].getText()
+    p6 = b.select('.temperature .p6')
+    weather4 = p6[0].getText()
 
-            
+    result = ''
+    result = result + ('Утром :' + weather1 + ' ' + weather2) + '\n'
+    result = result + ('Днём :' + weather3 + ' ' + weather4) + '\n'
+    temp = b.select('.rSide .description')
+    weather = temp[0].getText()
+    result = result + weather.strip()
+
+    return result
+
+def onload(id, uname, role):
+    data1 = [(id, uname, role)]
+    cursor.executemany("INSERT INTO idd(uid, uname, role) VALUES (?,?,?)", data1)
+    conn.commit()
+    
+def search(arg):
+    sql = "SELECT * FROM idd WHERE uname=?"
+    cursor.execute(sql, [(str(arg))])
+    return(cursor.fetchall())    
     
 tot = Bot('tot_bot', '2128506q')
 tot.loop()
+conn.close()
