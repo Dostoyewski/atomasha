@@ -56,6 +56,7 @@ class Bot:
     def __init__(self, login, password):
         self.login=login
         self.rocket = RocketChat(login, password, server_url='http://172.20.10.2:3000')
+        self.connectMQTT()
         print('Bot initialized')
         
     def updateUserData(self):
@@ -170,28 +171,82 @@ class Bot:
                 elif any(c in text[i] for c in ('задание напоминание').split()):
                     print('Получен запрос на создание напоминания')
                     name =  text[i].split('\n', maxsplit=3)[1]
-                    time = text[i].split('\n', maxsplit=3)[2]
+                    date = text[i].split('\n', maxsplit=3)[2]
                     mes = text[i].split('\n', maxsplit=3)[3]
-                    self.setTask(name, mes, time)
+                    print(name, date, mes)
+                    self.setTask(name, mes, date)
+                    self.send('Сделано!', ch=str(tid[i]))
                 else:
                     self.send(textMessage(text[i], tid[i]), ch=str(tid[i]))
+                self.checkTask(user[i]['name'], tid[i])
+                    
     def sendEveryone(self, txt):
         tid, msg, text, user = self.getLastMessages()
         for i in range(len(tid)):
             self.send(txt, ch=str(tid[i]))
-    def setTask(self, username, task, time):
+    def setTask(self, username, task, date):
         global tasks
         print('Adding task...')
-        tasks.append(pd.DataFrame([[username, task, time]], columns=['username','task', 'time']), ignore_index=True)
+        tasks = tasks.append(pd.DataFrame([[username, task, date]], columns=['username','task', 'time']), ignore_index=True)
         tasks.to_excel('tasks.xlsx')
         print('Finished!')
         pass
+    def checkTask(self, name, tid):
+        global tasks
+        now = datetime.date.today()
+        n =  str(now).split('-')
+        n.reverse()
+        for task in tasks.loc[tasks['username'] == name].values:
+            if (task[2]=='.'.join(n)):
+                self.send('Напоминание:\n'+task[1], ch=tid)
+        
     def setRole(self, uname, role):
         global user_data
         print(user_data.loc[user_data['uname'] == uname].index.values[0])
         user_data.at[str(user_data.loc[user_data['uname'] == uname].index.values[0]), 'role'] = role
         user_data.to_excel('user_data.xlsx')
         self.updateUserData()
+    def connectMQTT(self):
+        import paho.mqtt.client as mqtt
+        broker="sandbox.rightech.io"
+        clientID = "cardid2"
+        userd = {"login": "admin", "pw": "admin"}
+        
+        def on_connect(client, userdata, flags, rc):
+            if rc==0:
+                client.connected_flag=True 
+                print("Bot connected OK")
+                #client.publish("rb_online", 1, qos=2)
+                print("subscribing ")
+                client.subscribe("cid")
+            else:
+                print("Bad connection Returned code=",rc)
+                
+                
+        def on_disconnect(client, userdata, rc):
+            #client.publish("rb_online", 0, qos=2)
+            print("Disconnected")
+        
+        def on_publish(client, userdata, rc):
+            print("Data published")
+            
+        def on_message(client, userdata, message):
+            #time.sleep(1)
+            msg=str(message.payload.decode("utf-8"))
+            print("Received message =",msg)
+            
+            
+                
+            
+        sub = mqtt.Client(client_id=clientID)
+        sub.username_pw_set(username=userd["login"],password=userd["pw"])
+        sub.on_connect=on_connect 
+        sub.on_disconnect=on_disconnect
+        sub.on_publish = on_publish
+        sub.on_message = on_message
+        sub.loop_start()
+        print("Connecting to broker ",broker)
+        sub.connect(broker)
         
 def get_weather(city: str = "санкт-петербург") -> list:
     request = requests.get("https://sinoptik.com.ru/погода-" + city)
