@@ -10,6 +10,7 @@ from rocketchat_API.rocketchat import RocketChat
 import apiai
 import json
 import pandas as pd
+import datetime
 import time
 import bs4 as bs4
 import requests
@@ -158,14 +159,21 @@ class Bot:
                 elif all(c in text[i] for c in ('кадровая политика').split()):
                     self.send('https://www.rosatom.ru/career/sotrudnikam/kadrovaya-politika/', ch=str(tid[i]))
                 elif any(c in text[i] for c in ('найти найди поиск').split()):
-                    try:
-                        mes = text[i].split('\n', maxsplit=1)[1]
-                        self.send(docs.loc[mes in docs['docname']], ch=str(tid[i]))
-                    except:
-                        print(docs.loc[mes in docs['docname']])
-                        self.send('Вот что я нашла: Приказ Госкорпорации "Росатом" от 13.12.2018 N 1/1446-П '
-                                  'Приказ Госкорпорации "Росатом" от 28.11.2018 N 1/36-НПА '
-                                  'Приказ Госкорпорации "Росатом" от 21.11.2018 N 1/35-НПА ', ch=str(tid[i]))
+                    mes = text[i].split('\n', maxsplit=1)[1]
+                    print(docs.loc[docs['docname'] == mes].values)
+                    m = ''
+                    for doc in docs.values:
+                        if(mes.lower() in doc[0].lower()):
+                            m += doc[0] +'\n'
+                    if(m != ''):
+                        self.send('Вот что я нашла:\n'+m, ch=str(tid[i]))
+                    else:
+                        self.send('Я ничего не нашла. Запрос может быть некорректен.', ch=str(tid[i]))
+#                    except:
+#                        print(docs.loc[mes in docs['docname']])
+#                        self.send('Вот что я нашла: Приказ Госкорпорации "Росатом" от 13.12.2018 N 1/1446-П '
+#                                  'Приказ Госкорпорации "Росатом" от 28.11.2018 N 1/36-НПА '
+#                                  'Приказ Госкорпорации "Росатом" от 21.11.2018 N 1/35-НПА ', ch=str(tid[i]))
                 elif any(c in text[i] for c in ('погода погоды погоде').split()):
                     self.send(get_weather(), ch=str(tid[i]))
                 elif any(c in text[i] for c in ('задание напоминание').split()):
