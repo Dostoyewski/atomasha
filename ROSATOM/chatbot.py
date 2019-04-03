@@ -7,6 +7,7 @@ Created on Thu Mar 28 12:27:06 2019
 from pprint import pprint
 from rocketchat_API.rocketchat import RocketChat
 import apiai, json
+import requests
 
 rocket = RocketChat('atomasha', 'selena', server_url='http://178.70.218.84:3000')
 #pprint(rocket.me().json())
@@ -42,15 +43,15 @@ def run():
         name = []
         for i in range(0, len(jsonData['ims'])):
             idd.append(jsonData['ims'][i]['_id'])
-            msg.append(jsonData['ims'][i]['lastMessage']['_id'])
+            try:
+                msg.append(jsonData['ims'][i]['lastMessage']['_id'])
+            except Exception:
+                pass
             text.append(rocket.im_history(str(idd[i]), count=1).json()['messages'][0]['msg'])
             name.append(rocket.im_history(str(idd[i]), count=1).json()['messages'][0]['u'])
-            #print(textMessage(text[i]))
-            #if('привет' in text[i].lower()):
-             #   if(str(name[i]['name']) != 'ATOMASHA'):
-              #      rocket.chat_post_message('Иди нахуй, ' + str(name[i]['name']), channel=str(idd[i]))
             if(str(name[i]['name']) != 'ATOMASHA'):
                 rocket.chat_post_message(textMessage(text[i], idd[i]), channel=str(idd[i]))
+            
         print(idd)
         print(msg)
         print(text)
