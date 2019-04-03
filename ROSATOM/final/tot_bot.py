@@ -55,7 +55,7 @@ def textMessage(update, did):
 class Bot:
     def __init__(self, login, password):
         self.login=login
-        self.rocket = RocketChat(login, password, server_url='http://178.70.218.84:3000')
+        self.rocket = RocketChat(login, password, server_url='http://172.20.10.2:3000')
         print('Bot initialized')
         
     def updateUserData(self):
@@ -136,12 +136,6 @@ class Bot:
                 if all(c in text[i] for c in ['привет']):
                     mes = 'Привет, '+user[i]['name']
                     self.send(mes, ch=str(tid[i]))
-                elif all(c in text[i] for c in ['кек']):
-                    mes = 'лол'
-                    self.send(msg, ch=str(tid[i]))
-                elif all(c in text[i] for c in ('аригато в хату').split()):
-                    mes = 'Онегай шимасу вашему шалашу'
-                    self.send(mes, ch=str(tid[i]))
                 elif all(c in text[i] for c in ('отправь всем').split()):
                     print(user_data, user[i]['username'])
                     if (user_data.loc[user_data['uname'] == user[i]['username']]['role'].values[0]=='admin'):
@@ -172,14 +166,24 @@ class Bot:
                                   'Приказ Госкорпорации "Росатом" от 21.11.2018 N 1/35-НПА ', ch=str(tid[i]))
                 elif any(c in text[i] for c in ('погода погоды погоде').split()):
                     self.send(get_weather(), ch=str(tid[i]))
+                elif any(c in text[i] for c in ('задание напоминание').split()):
+                    print('Получен запрос на создание напоминания')
+                    name =  text[i].split('\n', maxsplit=3)[1]
+                    time = text[i].split('\n', maxsplit=3)[2]
+                    mes = text[i].split('\n', maxsplit=3)[3]
+                    self.setTask(name, mes, time)
                 else:
                     self.send(textMessage(text[i], tid[i]), ch=str(tid[i]))
     def sendEveryone(self, txt):
         tid, msg, text, user = self.getLastMessages()
         for i in range(len(tid)):
             self.send(txt, ch=str(tid[i]))
-    def setTask(self, imid, task, time):
-        
+    def setTask(self, username, task, time):
+        global tasks
+        print('Adding task...')
+        tasks.append(pd.DataFrame([[username, task, time]], columns=['username','task', 'time']), ignore_index=True)
+        tasks.to_excel('tasks.xlsx')
+        print('Finished!')
         pass
     def setRole(self, uname, role):
         global user_data
