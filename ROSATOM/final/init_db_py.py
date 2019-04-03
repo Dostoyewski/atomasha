@@ -2,8 +2,8 @@ import sqlite3
 import os
 
 
-def onload(id, uname, role):
-    data1 = [(id, uname, role)]
+def onload(id, uname, role, position, salary, cid):
+    data1 = [(id, uname, role, position, salary, cid)]
     cursor.executemany("INSERT INTO idd(uid, uname, role, position, salary, cid) VALUES (?,?,?,?,?,?)", data1)
     conn.commit()
     
@@ -39,9 +39,10 @@ date REAL NOT NULL);
 """
 
 
-
 cursor.executescript(sql_idd)
 cursor.executescript(sql_tasks)
 
 conn.commit()
-conn.close()
+#conn.close()
+onload('id', 'FeDOS', 'admin', 'CTO', 150000, '069442')
+onload('id', 'FeDOS', 'admin', 'CTO', 150000, '069442')

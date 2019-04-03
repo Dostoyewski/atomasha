@@ -8,29 +8,28 @@ Created on Wed Apr  3 18:38:38 2019
 import paho.mqtt.client as mqtt
 import time
 import serial
-ser = serial.Serial("COM8", 115200)
+try:
+    ser = serial.Serial("COM8", 115200)
+except:
+    pass
+
 
 broker="sandbox.rightech.io"
 clientID = "cardid"
 userd = {"login": "admin", "pw": "admin"}
 
 def on_connect(client, userdata, flags, rc):
-    client.publish("bot_online", 1)
+    pass
     if rc==0:
         print("Bot connected OK")
     else:
         print("Bad connection Returned code=",rc)
         
 def on_disconnect(client, userdata, rc):
-    client.publish("bot_online", 0)
-#    print("Disconnected", rc)
+    pass
 
 def on_publish(client, userdata, rc):
     print("Data published")
-
-broker="sandbox.rightech.io"
-clientID = "tot_test"
-userd = {"login": "admin", "pw": "admin"}
 
 # Работа с сообщениями
 client = mqtt.Client(client_id=clientID)            
@@ -55,7 +54,7 @@ while True:
             string = ser.readline()
             #time.sleep(11)
             print("read data:",string)
-                    
+            client.publish('cid', string.decode('utf-8'))
       
         except Exception as e1:
             print ("error communicating...: " + str(e1))

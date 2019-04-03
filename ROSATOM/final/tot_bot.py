@@ -161,6 +161,7 @@ class Bot:
                         mes = text[i].split('\n', maxsplit=1)[1]
                         self.send(docs.loc[mes in docs['docname']], ch=str(tid[i]))
                     except:
+                        print(docs.loc[mes in docs['docname']])
                         self.send('Вот что я нашла: Приказ Госкорпорации "Росатом" от 13.12.2018 N 1/1446-П '
                                   'Приказ Госкорпорации "Росатом" от 28.11.2018 N 1/36-НПА '
                                   'Приказ Госкорпорации "Росатом" от 21.11.2018 N 1/35-НПА ', ch=str(tid[i]))

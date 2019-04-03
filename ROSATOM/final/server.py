@@ -22,6 +22,7 @@ def search(arg):
     
 #onload(2,2,6,1,1)
 #onload('JdjtjvHMmtjnJa9DsoyJLq8BjyvnsrhsjD', 'FeDOS', 'admin')
+onload()
 search('JdjtjvHMmtjnJa9DsoyJLq8BjyvnsrhsjD')
 time.sleep(5)
 conn.close()
