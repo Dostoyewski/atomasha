@@ -138,6 +138,7 @@ class Bot:
                 if all(c in text[i] for c in ['привет']):
                     mes = 'Привет, '+user[i]['name']
                     self.send(mes, ch=str(tid[i]))
+                    
                 elif all(c in text[i] for c in ('отправь всем').split()):
                     print(user_data, user[i]['username'])
                     if (user_data.loc[user_data['uname'] == user[i]['username']]['role'].values[0]=='admin'):
@@ -151,13 +152,45 @@ class Bot:
                             self.send('Знаешь, ты изменился...', ch=str(tid[i]))
                     else:
                         self.send('Вы не админ', ch=str(tid[i]))
+                
                 elif all(c in text[i] for c in ('инициализируй базу').split()):
                     self.initUserData()
                     self.send('Сделано!', ch=str(tid[i]))
+                
                 elif all(c in text[i] for c in ('контакты').split()):
                     self.send('https://www.rosatom.ru/about/contact-info/', ch=str(tid[i]))
+                    
                 elif all(c in text[i] for c in ('кадровая политика').split()):
                     self.send('https://www.rosatom.ru/career/sotrudnikam/kadrovaya-politika/', ch=str(tid[i]))
+                
+                elif all(c in text[i] for c in ('статистика').split()):
+                    print('Получен запрос на статистику')
+                    try:
+                        mes = text[i].split('\n', maxsplit=1)[1]
+                    except:
+                        pass
+                    print(user_data, user[i]['username'])
+                    if (user_data.loc[user_data['uname'] == user[i]['username']]['role'].values[0]=='admin'):
+                        try:
+                            conduit = pd.read_excel('conduit.xlsx')
+                            fail = 0
+                            for i in range(0, len(conduit[mes])):
+                                if(conduit[mes][i] == 0):
+                                    fail += 1
+                            print(fail)
+                            self.send('Статистика: \n' + 'Количество пропусков: ' + fail,  ch=str(tid[i]))
+                        except:
+                            self.send('Знаешь, ты изменился...', ch=str(tid[i]))
+                    else:
+                        conduit = pd.read_excel('conduit.xlsx')
+                        fail = 0
+                        mes = user[i]['username']
+                        for jj in range(0, len(conduit[mes])):
+                            if(conduit[mes][jj] == 0):
+                                fail += 1
+                        print(fail)
+                        self.send('Статистика: \n' + 'Количество пропусков: ' + str(fail),  ch=str(tid[i]))
+                    
                 elif any(c in text[i] for c in ('найти найди поиск').split()):
                     mes = text[i].split('\n', maxsplit=1)[1]
                     print(docs.loc[docs['docname'] == mes].values)
@@ -169,13 +202,34 @@ class Bot:
                         self.send('Вот что я нашла:\n'+m, ch=str(tid[i]))
                     else:
                         self.send('Я ничего не нашла. Запрос может быть некорректен.', ch=str(tid[i]))
-#                    except:
-#                        print(docs.loc[mes in docs['docname']])
-#                        self.send('Вот что я нашла: Приказ Госкорпорации "Росатом" от 13.12.2018 N 1/1446-П '
-#                                  'Приказ Госкорпорации "Росатом" от 28.11.2018 N 1/36-НПА '
-#                                  'Приказ Госкорпорации "Росатом" от 21.11.2018 N 1/35-НПА ', ch=str(tid[i]))
+                        
+                elif any(c in text[i] for c in ('Информация Скажи').split()):
+                    mes = text[i].split('\n', maxsplit=1)[1]
+                    udata = pd.read_excel('user_data.xlsx')
+                    m = ''
+                    s = ''
+                    a = ''
+                    num = []
+                    for az in range(0, len(udata['uname'])):
+                        if(mes.lower() in udata['uname'][az].lower()):
+                            m += udata['uname'][az].lower() +'\n'
+                            num.append(az)
+                            if(udata['state'][az] == 0):
+                                s = 'Отсутсвует'
+                            else:
+                                s = 'Присутствует'
+                    if(m != ''):
+                        self.send('Вот что я нашла:\n' + 'Имя: ' + udata['uname'][num[0]] + '\n' + 
+                              'Зарплата: ' + str(udata['salary'][num[0]]) + '\n' +
+                              'Должность: ' + udata['position'][num[0]] + '\n' +
+                              'Статус: ' + s + '\n', ch=str(tid[i]))
+                        
+                    else:
+                        self.send('Я ничего не нашла. Запрос может быть некорректен.', ch=str(tid[i]))
+                    
                 elif any(c in text[i] for c in ('погода погоды погоде').split()):
                     self.send(get_weather(), ch=str(tid[i]))
+                    
                 elif any(c in text[i] for c in ('задание напоминание').split()):
                     print('Получен запрос на создание напоминания')
                     name =  text[i].split('\n', maxsplit=3)[1]
@@ -187,6 +241,8 @@ class Bot:
                 else:
                     self.send(textMessage(text[i], tid[i]), ch=str(tid[i]))
                 self.checkTask(user[i]['name'], tid[i])
+                
+                
                     
     def sendEveryone(self, txt):
         tid, msg, text, user = self.getLastMessages()
@@ -214,6 +270,7 @@ class Bot:
         user_data.at[str(user_data.loc[user_data['uname'] == uname].index.values[0]), 'role'] = role
         user_data.to_excel('user_data.xlsx')
         self.updateUserData()
+        
     def connectMQTT(self):
         import paho.mqtt.client as mqtt
         broker="sandbox.rightech.io"
@@ -242,10 +299,7 @@ class Bot:
             #time.sleep(1)
             msg=str(message.payload.decode("utf-8"))
             print("Received message =",msg)
-            
-            
-                
-            
+   
         sub = mqtt.Client(client_id=clientID)
         sub.username_pw_set(username=userd["login"],password=userd["pw"])
         sub.on_connect=on_connect 
