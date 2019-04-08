@@ -172,13 +172,14 @@ class Bot:
                     print(user_data, user[i]['username'])
                     if (user_data.loc[user_data['uname'] == user[i]['username']]['role'].values[0]=='admin'):
                         try:
-                            conduit = pd.read_excel('conduit.xlsx')
+                            conduit = pd.read_excel('new_conduit.xlsx')
                             fail = 0
-                            for i in range(0, len(conduit[mes])):
-                                if(conduit[mes][i] == 0):
-                                    fail += 1
+                            row = conduit.loc[conduit['user']=='FeDOS'].values
+                            for i in range(1,conduit.shape[1]):
+                                if (row[0][i]==0):
+                                    fail+=1
                             print(fail)
-                            self.send('Статистика: \n' + 'Количество пропусков: ' + fail,  ch=str(tid[i]))
+                            self.send('Статистика: \n' + 'Количество пропусков: ' + str(fail),  ch=str(tid[i]))
                         except:
                             self.send('Знаешь, ты изменился...', ch=str(tid[i]))
                     else:
@@ -242,7 +243,22 @@ class Bot:
                     self.send(textMessage(text[i], tid[i]), ch=str(tid[i]))
                 self.checkTask(user[i]['name'], tid[i])
                 
-                
+    def addMarkToConduit(self, mark, username, date, tid):
+        try:
+            conduit = pd.read_excel('new_conduit.xlsx')
+            s = pd.DataFrame(columns=[])
+            s = s.append(pd.Series({'user': username, date: mark}), ignore_index=True)
+            conduit = pd.merge(conduit, s, on='user', how='outer')
+            conduit.to_excel('new_conduit.xlsx')
+        except:
+            self.send('Что-то пошло не так...', ch=str(tid))
+    def addUserToConduit(self, username, tid):
+        try:
+            conduit = pd.read_excel('new_conduit.xlsx')
+            conduit = conduit.append(pd.Series({'user': username}), ignore_index=True)
+            conduit.to_excel('new_conduit.xlsx')
+        except:
+            self.send('Что-то пошло не так...', ch=str(tid))
                     
     def sendEveryone(self, txt):
         tid, msg, text, user = self.getLastMessages()
