@@ -15,6 +15,8 @@ import time
 import bs4 as bs4
 import requests
 import sqlite3
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 global answer
 global file
@@ -56,10 +58,10 @@ def textMessage(update, did):
 class Bot:
     def __init__(self, login, password):
         self.login=login
-        self.rocket = RocketChat(login, password, server_url='http://172.20.10.2:3000')
+        self.rocket = RocketChat(login, password, server_url='http://178.70.22.151:3000/')
         self.connectMQTT()
         print('Bot initialized')
-        
+
     def updateUserData(self):
         print('Starting updating user data')
         global user_data
@@ -89,7 +91,7 @@ class Bot:
             else:
                 user_data = user_data.append({'imid': jsonData['ims'][i]['_id'], 'uname': jsonData['ims'][i]['usernames'][0], 'role': 'user'}, ignore_index=True)
             user_data.to_excel('user_data.xlsx')
-        
+
         print('Finished initializing user data')
     def getLastMessage(self):
         user = self.rocket.channels_history('GENERAL', count=5).json()['messages'][0]['u']
@@ -103,7 +105,7 @@ class Bot:
         user = []
         for i in range(0, len(jsonData['ims'])):
             tid.append(jsonData['ims'][i]['_id'])
-            try:     
+            try:
                 msg.append(jsonData['ims'][i]['lastMessage']['_id'])
             except KeyError:
                 self.send('Твоей маме зять не нужен?', ch=str(tid[i]))
@@ -123,7 +125,7 @@ class Bot:
             if all(c in text for c in ['отправь', 'коды запуска ракет']):
                 msg = 'Извини, '+user['name']+', но ты не достоин :с'
                 self.send(msg)
-            
+
     def send(self, msg, ch='GENERAL'):
         self.rocket.chat_post_message(msg, channel=ch)
     def loop(self):
@@ -138,7 +140,7 @@ class Bot:
                 if all(c in text[i] for c in ['привет']):
                     mes = 'Привет, '+user[i]['name']
                     self.send(mes, ch=str(tid[i]))
-                    
+
                 elif all(c in text[i] for c in ('отправь всем').split()):
                     print(user_data, user[i]['username'])
                     if (user_data.loc[user_data['uname'] == user[i]['username']]['role'].values[0]=='admin'):
@@ -152,46 +154,23 @@ class Bot:
                             self.send('Знаешь, ты изменился...', ch=str(tid[i]))
                     else:
                         self.send('Вы не админ', ch=str(tid[i]))
-                
+
                 elif all(c in text[i] for c in ('инициализируй базу').split()):
                     self.initUserData()
                     self.send('Сделано!', ch=str(tid[i]))
-                
+
                 elif all(c in text[i] for c in ('контакты').split()):
                     self.send('https://www.rosatom.ru/about/contact-info/', ch=str(tid[i]))
-                    
+
                 elif all(c in text[i] for c in ('кадровая политика').split()):
                     self.send('https://www.rosatom.ru/career/sotrudnikam/kadrovaya-politika/', ch=str(tid[i]))
-                
+
                 elif all(c in text[i] for c in ('статистика').split()):
                     print('Получен запрос на статистику')
-                    try:
-                        mes = text[i].split('\n', maxsplit=1)[1]
-                    except:
-                        pass
-                    print(user_data, user[i]['username'])
-                    if (user_data.loc[user_data['uname'] == user[i]['username']]['role'].values[0]=='admin'):
-                        try:
-                            conduit = pd.read_excel('new_conduit.xlsx')
-                            fail = 0
-                            row = conduit.loc[conduit['user']=='FeDOS'].values
-                            for i in range(1,conduit.shape[1]):
-                                if (row[0][i]==0):
-                                    fail+=1
-                            print(fail)
-                            self.send('Статистика: \n' + 'Количество пропусков: ' + str(fail),  ch=str(tid[i]))
-                        except:
-                            self.send('Знаешь, ты изменился...', ch=str(tid[i]))
-                    else:
-                        conduit = pd.read_excel('conduit.xlsx')
-                        fail = 0
-                        mes = user[i]['username']
-                        for jj in range(0, len(conduit[mes])):
-                            if(conduit[mes][jj] == 0):
-                                fail += 1
-                        print(fail)
-                        self.send('Статистика: \n' + 'Количество пропусков: ' + str(fail),  ch=str(tid[i]))
-                    
+                    fail = self.calculateFails(user[i]['username'])
+                    self.send('Статистика: \n' + 'Количество пропусков: ' + str(fail),  ch=str(tid[i]))
+                    self.rocket.rooms_upload(rid=str(tid[i]), file='pie.png', msg = 'График ваших пропусков:')
+
                 elif any(c in text[i] for c in ('найти найди поиск').split()):
                     mes = text[i].split('\n', maxsplit=1)[1]
                     print(docs.loc[docs['docname'] == mes].values)
@@ -203,7 +182,7 @@ class Bot:
                         self.send('Вот что я нашла:\n'+m, ch=str(tid[i]))
                     else:
                         self.send('Я ничего не нашла. Запрос может быть некорректен.', ch=str(tid[i]))
-                        
+
                 elif any(c in text[i] for c in ('Информация Скажи').split()):
                     mes = text[i].split('\n', maxsplit=1)[1]
                     udata = pd.read_excel('user_data.xlsx')
@@ -220,17 +199,17 @@ class Bot:
                             else:
                                 s = 'Присутствует'
                     if(m != ''):
-                        self.send('Вот что я нашла:\n' + 'Имя: ' + udata['uname'][num[0]] + '\n' + 
+                        self.send('Вот что я нашла:\n' + 'Имя: ' + udata['uname'][num[0]] + '\n' +
                               'Зарплата: ' + str(udata['salary'][num[0]]) + '\n' +
                               'Должность: ' + udata['position'][num[0]] + '\n' +
                               'Статус: ' + s + '\n', ch=str(tid[i]))
-                        
+
                     else:
                         self.send('Я ничего не нашла. Запрос может быть некорректен.', ch=str(tid[i]))
-                    
+
                 elif any(c in text[i] for c in ('погода погоды погоде').split()):
                     self.send(get_weather(), ch=str(tid[i]))
-                    
+
                 elif any(c in text[i] for c in ('задание напоминание').split()):
                     print('Получен запрос на создание напоминания')
                     name =  text[i].split('\n', maxsplit=3)[1]
@@ -242,7 +221,7 @@ class Bot:
                 else:
                     self.send(textMessage(text[i], tid[i]), ch=str(tid[i]))
                 self.checkTask(user[i]['name'], tid[i])
-                
+
     def addMarkToConduit(self, mark, username, date, tid):
         try:
             conduit = pd.read_excel('new_conduit.xlsx')
@@ -259,7 +238,23 @@ class Bot:
             conduit.to_excel('new_conduit.xlsx')
         except:
             self.send('Что-то пошло не так...', ch=str(tid))
-                    
+    def calculateFails(self, username):
+        conduit = pd.read_excel('new_conduit.xlsx')
+        print(conduit)
+        fail = 0
+        op = 0
+        ok = 0
+        row = conduit.loc[conduit['user']==username].values
+        print(row)
+        for i in range(1, len(row)):
+           if(row[i] == 0):
+               fail += 1
+           elif(row[i] == 1):
+               op += 1
+           elif(row[i] == 2):
+               ok += 1
+        draw([fail, op, ok])
+        return fail
     def sendEveryone(self, txt):
         tid, msg, text, user = self.getLastMessages()
         for i in range(len(tid)):
@@ -279,53 +274,45 @@ class Bot:
         for task in tasks.loc[tasks['username'] == name].values:
             if (task[2]=='.'.join(n)):
                 self.send('Напоминание:\n'+task[1], ch=tid)
-        
+
     def setRole(self, uname, role):
         global user_data
         print(user_data.loc[user_data['uname'] == uname].index.values[0])
         user_data.at[str(user_data.loc[user_data['uname'] == uname].index.values[0]), 'role'] = role
         user_data.to_excel('user_data.xlsx')
         self.updateUserData()
-        
+
     def connectMQTT(self):
         import paho.mqtt.client as mqtt
         broker="sandbox.rightech.io"
         clientID = "cardid2"
         userd = {"login": "admin", "pw": "admin"}
-        
+
         def on_connect(client, userdata, flags, rc):
             if rc==0:
-                client.connected_flag=True 
-                print("Bot connected OK")
-                #client.publish("rb_online", 1, qos=2)
+                client.connected_flag=True
                 print("subscribing ")
                 client.subscribe("cid")
             else:
                 print("Bad connection Returned code=",rc)
-                
-                
+
+
         def on_disconnect(client, userdata, rc):
-            #client.publish("rb_online", 0, qos=2)
             print("Disconnected")
-        
-        def on_publish(client, userdata, rc):
-            print("Data published")
-            
+
         def on_message(client, userdata, message):
-            #time.sleep(1)
             msg=str(message.payload.decode("utf-8"))
             print("Received message =",msg)
-   
+
         sub = mqtt.Client(client_id=clientID)
         sub.username_pw_set(username=userd["login"],password=userd["pw"])
-        sub.on_connect=on_connect 
+        sub.on_connect=on_connect
         sub.on_disconnect=on_disconnect
-        sub.on_publish = on_publish
         sub.on_message = on_message
         sub.loop_start()
         print("Connecting to broker ",broker)
         sub.connect(broker)
-        
+
 def get_weather(city: str = "санкт-петербург") -> list:
     request = requests.get("https://sinoptik.com.ru/погода-" + city)
     b = bs4.BeautifulSoup(request.text, "html.parser")
@@ -351,12 +338,34 @@ def onload(id, uname, role):
     data1 = [(id, uname, role)]
     cursor.executemany("INSERT INTO idd(uid, uname, role) VALUES (?,?,?)", data1)
     conn.commit()
-    
+
 def search(arg):
     sql = "SELECT * FROM idd WHERE uname=?"
     cursor.execute(sql, [(str(arg))])
-    return(cursor.fetchall())    
-    
+    return(cursor.fetchall())
+
+
+def draw(data_values):
+    data_names = ['Пропуск','Оплачиваемый пропуск','Явка']
+    data_names[0] = data_names[0] + ': '+ str(data_values[0])
+    data_names[1] = data_names[1] + ': '+ str(data_values[1])
+    data_names[2] = data_names[2] + ': '+ str(data_values[2])
+
+
+    dpi = 100
+    fig = plt.figure(dpi = dpi, figsize = (1280 / dpi, 720 / dpi) )
+    mpl.rcParams.update({'font.size': 10})
+
+    plt.title('Статистика ваших посещений')
+
+    plt.pie(
+        data_values, autopct='%.1f', radius = 1.1,
+        explode = [0.15] + [0 for _ in range(len(data_names) - 1)])
+    plt.legend(
+        bbox_to_anchor = (-0.6, 0.50, 0.25, 0.25),
+        loc = 'lower left', labels = data_names)
+    fig.savefig('pie.png')
+
 tot = Bot('tot_bot', '2128506q')
 tot.loop()
 conn.close()
